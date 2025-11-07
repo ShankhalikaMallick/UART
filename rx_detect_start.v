@@ -3,6 +3,8 @@ module rx_detect_start(
     input rx_datain,
     output de_strtbit );
 
+    reg [3:0] count=0;
+
     always @ (posedge clk)
     begin
         if (rx_datain==0)
