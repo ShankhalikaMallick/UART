@@ -28,7 +28,7 @@ module tx_fsm(
             s0=1;              // select lines for mux
             s1=1;              // select lines for mux: 11 is for stop_bit
             temp=0;             // indicates operation going on in data_bit state
-            temp1=1;            // idk what they are for    
+            temp1=1;            // indicates operation going on other than data_bit state   
             if (tx_en ==1)
                 next_state= START_BIT;
             else 
@@ -41,8 +41,8 @@ module tx_fsm(
             shift=0;            // no need to shift 
             s0=0;               // select lines for mux
             s1=0;               // select lines for mux: 00 is for start_bit
-            temp=0;
-            temp1=1;            // idk what they are for  
+            temp=0;             // indicates operation going on in data_bit state
+            temp1=1;            // indicates operation going on other than data_bit state  
             if(flag1==0)
                 next_state= START_BIT;
             else
@@ -56,7 +56,7 @@ module tx_fsm(
             s0=0;               // select lines for mux
             s1=1;               // select lines for mux: 01 is for data_bit
             temp=1;             // indicates operation going on in data_bit state
-            temp1=0;
+            temp1=0;            // indicates operation going on other than data_bit state
             if (flag2==0)
                 next_state= DATA_BIT;
             else
