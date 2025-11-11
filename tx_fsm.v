@@ -1,144 +1,152 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 11.11.2025 16:33:43
+// Design Name: 
+// Module Name: tx_fsm
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
 module tx_fsm(
     input clk,
     input reset,
-    input tx_en,
-    output reg load_data,
+    input tx_start,
+    output reg [1:0] sel,       // control mux
+    output reg load,            // control shift register
     output reg shift,
-    output reg s0,
-    output reg s1);
-
-    parameter IDLE= 3'b000;
-    parameter START_BIT= 3'b001;
-    parameter DATA_BIT=3'b010;
-    parameter PARITY_BIT=3'b011;
-    parameter STOP_BIT=3'b100;
-
+    output reg parity_load,     // control the parity
+    output reg tx_busy    );
+    
+    reg [2:0] count;
+    reg count_en;
+    wire data_done;             // 1 when count=7, all 7 bits are shifted serially
     reg [2:0] state, next_state;
-    reg flag1, flag2, temp, temp1;
-    reg [3:0] x1;              // counter variable counting 0-8
-    reg [4:0] x2;              // counter variable counting 0-15
-
-    always@(*)
+    
+    parameter IDLE= 3'b000;
+    parameter START= 3'b001;
+    parameter DATA= 3'b010;
+    parameter PARITY= 3'b011;   
+    parameter STOP= 3'b100;
+    
+    assign data_done = (count==7);
+    
+// counter
+    always @(posedge clk, posedge reset)
     begin
+        if(reset==1)
+            count <=0;
+        else
+        begin
+            if(count_en==1)
+                count <= count+1;           // count at data state
+            else
+                count <=0;
+        end
+    end 
+    
+// state updation
+    always @(posedge clk, posedge reset)
+    begin
+        if(reset==1)
+            state <= IDLE;
+        else
+            state <=next_state;
+    end
+    
+ // detecting present state
+    always @(*)
+    begin 
         case (state)
         IDLE:
-        begin          
-            load_data=0;       // idle condition: no data loaded
-            shift=0;           // no need to shift 
-            s0=1;              // select lines for mux
-            s1=1;              // select lines for mux: 11 is for stop_bit
-            temp=0;             // indicates operation going on in data_bit state
-            temp1=1;            // indicates operation going on other than data_bit state   
-            if (tx_en ==1)
-                next_state= START_BIT;
-            else 
+            if(tx_start==1)
+                next_state = START;
+            else
                 next_state= IDLE;
-        end
-
-        START_BIT:
-        begin
-            load_data=1;        // start loading data into packet
-            shift=0;            // no need to shift 
-            s0=0;               // select lines for mux
-            s1=0;               // select lines for mux: 00 is for start_bit
-            temp=0;             // indicates operation going on in data_bit state
-            temp1=1;            // indicates operation going on other than data_bit state  
-            if(flag1==0)
-                next_state= START_BIT;
-            else
-                next_state= DATA_BIT;
-        end
-
-        DATA_BIT:
-        begin
-            load_data=0;        // no data need to be loaded
-            shift=1;            // shift data bits
-            s0=0;               // select lines for mux
-            s1=1;               // select lines for mux: 01 is for data_bit
-            temp=1;             // indicates operation going on in data_bit state
-            temp1=0;            // indicates operation going on other than data_bit state
-            if (flag2==0)
-                next_state= DATA_BIT;
-            else
-                next_state= PARITY_BIT;
-        end
+                
+        START:
+                next_state= DATA;       // IN START STATE IT REAMINS FOR ONLY ONE CLOCK CYCLE FOR SENDING THE START BIT
         
-        PARITY_BIT:
-        begin
-            load_data=0;        // no data need to be loaded
-            shift=0;            // no need to shift 
-            s0=1;               // select lines for mux
-            s1=0;               // select lines for mux: 10 is for parity_bit
-            temp=0;
-            temp1=1;
-            if (flag1==0)
-                next_state= PARITY_BIT;
-            else 
-                next_state= STOP_BIT;  
-        end
-
-        STOP_BIT:
-        begin
-            load_data=0;        // no data need to be loaded
-            shift=0;            // no need to shift 
-            s0=1;               // select lines for mux
-            s1=1;               // select lines for mux: 11 is for stop_bit
-            temp=0;
-            temp1=0;
-            if (flag1==0)
-                next_state= STOP_BIT;
+        DATA:
+            if(data_done==1)
+                next_state = PARITY;    // IT WILL REMAIN HERE FOR 8 CLOCK CYCLES
+            else
+                next_state= DATA;
+                
+        PARITY:
+                next_state= DATA;       // REMAIN HERE FOR 1 CLOCK CYCLE TO SEND THE PARITY BIT
+                
+        STOP:
+             if(tx_start==1)
+                next_state = START;
             else
                 next_state= IDLE;
-        end
-        endcase
+                
+        endcase         
     end
-
-    always @ (posedge clk)
-    begin
-        if (temp==1)            // operating in data bit state
-        begin
-            if (x1==4'd8)       // x1 is a counter variable counting 8 times
-            begin
-                flag2=1;         // data is now loaded completely, goto parity_bit state now 
-                x1=0;
+    
+    
+// update constants depending on present state    
+    always @(*)
+    begin 
+        case (state)
+            IDLE:begin
+                sel=2'b11;              // TO SEND 1 DURING IDLE STATE
+                load=1'b0;
+                shift=1'b0;
+                parity_load=1'b0;
+                tx_busy=1'b0;
+                count_en=1'b0;
             end
-            else 
-            begin
-                flag2=0;
-                x1= x1 + 1'b1;
+            
+            START:begin
+                sel=2'b00;              // TO SEND 0 DURING START STATE
+                load=1'b1;              // DURING THIS STATE DATA IS LOADED TO SHIFT
+                shift=1'b0;
+                parity_load=1'b1;       // PARITY LOAD IS CALCULATED
+                tx_busy=1'b0;
+                count_en=1'b0;
             end
-        end
-        else                       // temp is not 1 ie. not in data_bit state
-        begin
-            flag2=0;            
-        end
+            
+            DATA:begin
+                sel=2'b01;              // TO SEND SERIAL DATA_OUT DURING DATA STATE
+                load=1'b0;
+                shift=1'b1;
+                parity_load=1'b0;
+                tx_busy=1'b1;
+                count_en=1'b1;
+            end
+            
+            PARITY:begin
+                sel=2'b10;              // TO SEND PARITY DURING PARITY STATE
+                load=1'b0;
+                shift=1'b0;
+                parity_load=1'b0;
+                tx_busy=1'b1;
+                count_en=1'b0;
+            end
+            
+            STOP: begin
+                sel=2'b11;              // TO SEND 1 DURING STOP STATE
+                load=1'b0;              // DURING THIS STATE DATA IS LOADED TO SHIFT
+                shift=1'b0;
+                parity_load=1'b0;       // PARITY LOAD IS CALULATED
+                tx_busy=1'b1;           // TRANSMITTER IS BUSY
+                count_en=1'b0;
+            end
+        endcase     
     end
-
-    always @ (posedge clk)
-    begin
-        if(temp1==1)
-        begin
-            if(x2==5'd15)
-            begin
-                flag1=1;
-                x2=0;
-            end
-            else
-            begin
-                flag1=0;
-                x2=x2+1;
-            end
-        end
-        else
-        flag1=0;
-    end   
-
-    always @(posedge clk or posedge reset) 
-    begin
-        if (reset == 1)
-        state <= IDLE;
-        else
-        state <= next_state;
-    end
-
+      
 endmodule
