@@ -1,0 +1,7 @@
+<p> What is UART protocol ? </p>
+A set of rules and regulations is called a protocol. 
+UART stands for a Universal Asynchronous Receiver and Transmitter. 
+UART Protocols is a serial communication with two wired protocols.
+The data cable signal lines are labelled as Rx and Tx.
+Serial communication is commonly used for transmitting and receiving the signal.
+It transfers and receives the data serially bit by bit without class pulses.
