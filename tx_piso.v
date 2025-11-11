@@ -1,29 +1,53 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 11.11.2025 16:29:03
+// Design Name: 
+// Module Name: tx_piso
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
 module tx_piso(
     input clk,
     input reset,
-    input [7:0] tx_data,
+    input load,
     input shift,
-    input load_data,
-    output reg data_bit );
+    input [7:0] piso_in,
+    output piso_out );
 
-    reg [7:0] temp;         // temporary counter
+    reg [7:0]temp;
 
-   always @ (posedge clk or posedge reset)
-   begin
-        if (reset ==0)
+    assign piso_out= temp[0];
+
+    always @(posedge clk, posedge reset)
+    begin
+        if(reset)
+            temp <= 0;
+        else
         begin
-            data_bit=0;
-            temp <=0;
-        end
-        else if (load_data == 1)
-        begin
-            temp <= tx_data;
-        end
-        else if (shift == 1) 
-        begin           
-        // data has already been loaded, now we convert parallel data to serial data
-        data_bit= temp[0];
-        temp <= temp>>1; 
-        end
-   end
+            if(load)
+                temp <= piso_in;
+            else
+            begin
+                if(shift)
+                    temp <= {1'b0, temp[7:1]};
+                else
+                    temp <= temp;
+            end
+        end 
+    end
+
 endmodule
