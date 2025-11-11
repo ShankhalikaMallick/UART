@@ -1,0 +1,9 @@
+
+What Is a Baud Rate Generator in UART and How Does It Work?
+
+
+The baud rate generator ensures that the transmitter and receiver operate at a common communication speed.
+It takes a high-frequency input clock signal and divides it by a predefined divisor value.
+The divisor value is chosen to match the desired baud rate (e.g., 9600, 115200 bps).
+The resulting lower-frequency output clock synchronizes the timing for data transmission and reception in UART.
+Both devices must use the same baud rate for reliable communication.
