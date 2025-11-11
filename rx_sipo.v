@@ -1,31 +1,53 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 11.11.2025 16:19:53
+// Design Name: 
+// Module Name: rx_sipo
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
 module rx_sipo (
     input clk,
     input reset,
-    input rx_datain,
+    input rx_in,
+    input sample_done,
     input shift,
-    output [7:0] rx_dataout );
+    output [9:0] data_out );
 
-    reg [7:0] temp;
+    reg [9:0] temp;
 
-    always @ (posedge clk or posedge reset)
+    assign data_out=temp;
+    
+    always@(posedge clk, posedge reset)
     begin
-        if(reset==0)
+        if(reset)
             temp<=0;
-        else if (shift == 1)
-        begin
-            // we shift temp right by one
-            temp [7] <= rx_datain;
-            temp [6] <= temp [7];
-            temp [5] <= temp [6];
-            temp [4] <= temp [5];
-            temp [3] <= temp [4];
-            temp [2] <= temp [3];
-            temp [1] <= temp [2];
-            temp [0] <= temp [1];
-        end
         else
-        temp <= temp;
-    end 
+        begin
+            if(shift==1)
+            begin
+                if(sample_done)
+                    temp <= {rx_in, temp[9:1]};
+                else
+                    temp <= temp;
+            end
+            else
+                temp <= temp;
+        end
+    end
 
-    assign rx_dataout = temp ;
-endmodule  
+endmodule
