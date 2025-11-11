@@ -1,0 +1,20 @@
+Flowchart representing Transmitter and Receiver Communication in UART
+
+
+Transmitter converts parallel data to serial.
+                ↓
+Start bit added to signal the start of data transmission.
+                ↓
+Data bits sent sequentially over the TX line.
+                ↓
+Parity bit (optional) added for error checking.
+                ↓
+Stop bit added to mark the end of the frame.
+                ↓
+Receiver detects the start bit and synchronizes.
+                ↓
+Receiver reads the data bits and checks the parity (if present).
+                ↓
+Receiver removes start, parity, and stop bits.
+                ↓
+Receiver reconstructs the original parallel data.
