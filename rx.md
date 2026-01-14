@@ -1,4 +1,4 @@
-<img width="1919" height="489" alt="image" src="https://github.com/user-attachments/assets/a3201655-f15c-41cc-9bbb-cec9b456369f" />1. output of start bit detection : rx_start.vcd
+1. output of start bit detection : rx_start.vcd
    
    <img width="1919" height="417" alt="Screenshot 2026-01-14 115505" src="https://github.com/user-attachments/assets/73586ef5-0755-4532-a425-a5ac301ce5ba" />
 
