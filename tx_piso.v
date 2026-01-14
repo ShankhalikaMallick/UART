@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -25,7 +25,7 @@ module tx_piso(
     input reset,
     input load,
     input shift,
-    input [7:0] piso_in,
+    input [7:0] data,
     output piso_out );
 
     reg [7:0]temp;
@@ -35,11 +35,11 @@ module tx_piso(
     always @(posedge clk, posedge reset)
     begin
         if(reset)
-            temp <= 0;
+            temp <= 8'b0;
         else
         begin
             if(load)
-                temp <= piso_in;
+                temp <= data;
             else
             begin
                 if(shift)
