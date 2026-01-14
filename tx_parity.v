@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -23,7 +23,7 @@
 module tx_parity(
     input clk,
     input reset,
-    input [7:0] parity_data_in,
+    input [7:0] data,
     input parity_load,
     output reg parity_out );
 
@@ -34,7 +34,7 @@ module tx_parity(
         else
         begin
             if(parity_load)
-                parity_out <=^(parity_data_in);
+                parity_out <=^(data);
             else
                 parity_out <= parity_out;
         end
