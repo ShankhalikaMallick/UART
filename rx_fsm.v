@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -19,120 +19,111 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
 module rx_fsm(
-    input clk,
-    input reset,
-    input strt_bit,
+    input  clk,
+    input  reset,
+    input  strt_bit,
+    input  data_valid,
     input parity_error,
-    output reg run_shift,
-    output reg parity_load,
-    output reg chk_stop,
-    output sample_done    );
-    
-    reg [3:0] bcount;       // to check the middle of data
-    reg [3:0] count;        // to check how many data I have received
-    wire data_done;
-    reg count_en;           // to enable the count
-    reg [1:0] state, next_state;
-    
-    parameter IDLE= 2'b00;
-    parameter DATA= 2'b01;
-    parameter PARITY= 2'b10;   
-    parameter STOP= 2'b11;
-    
-    assign sample_done= (bcount==7);            // rx 8 clks have passed
-    assign data_done=(count==11);               // when SIPO has received all 11 data , then receiver work is done
-    always @(posedge clk, posedge reset)
-    begin
-            if(reset==1)
-                bcount <=0;
-        else
-        begin
-            if(state!=IDLE)
-                bcount <= bcount+1;           // count at data state
-            else
-                bcount <=0;
-        end
-    end 
-    
-    always @(posedge clk, posedge reset)
-    begin
-        if(reset==1)
-                count <=0;
-        else
-        begin
-            if(count_en)
-            begin
-                if(sample_done) count <= count+1;         
-                else            count <= count;
-            end
-            else
-                count <=0;
-        end
-    end 
-    
-    always @(posedge clk, posedge reset)
-    begin
-        if(reset==1)
+    input stop_error,
+    output reg start,              // indicates if we have to check for start bit
+    output reg shift,          // one-cycle shift pulse
+    output reg parity_load,   // one-cycle parity check
+    output reg chk_stop       // one-cycle stop check
+);
+
+    // control lines
+    reg [2:0] state, next_state;
+
+    // FSM states
+    localparam IDLE   = 3'b000;
+    localparam DATA   = 3'b001;
+    localparam PARITY = 3'b010;
+    localparam STOP   = 3'b011;
+
+    // ---------------- STATE REGISTER ----------------
+    always @(posedge clk or posedge reset) begin
+        if (reset)
             state <= IDLE;
         else
-            state <=next_state;
+            state <= next_state;
     end
-    
-    always @(*)
-    begin 
+
+    // ---------------- FSM COMBINATIONAL ----------------
+    always @(*) begin
+        start=0;
+        parity_load = 0;
+        chk_stop = 0;
+        shift = 0;
+        
         case (state)
-        IDLE:
-            if(strt_bit==1)
-                next_state = DATA;
-            else
-                next_state= IDLE;
-                        
-        DATA:
-            if(data_done==1)
-                next_state = PARITY;    
-            else
-                next_state= DATA;
-                
-        PARITY:
-            if(parity_error==1)
-                next_state= IDLE; 
-            else
-                next_state= STOP;    
-                
-        STOP:
-                next_state= IDLE;    
-        endcase         
+            IDLE: begin
+                start=1;
+                chk_stop = 0;
+                parity_load = 0;
+                shift = 0;
+                if (strt_bit)
+                begin
+                    next_state = DATA;
+                    start <=0;
+                end
+                else
+                    next_state = IDLE;
+            end
+
+            DATA: begin
+                start=0;
+                parity_load = 0;
+                shift = 1'b1;              // pulse once per clock
+                chk_stop = 0;
+                if (data_valid == 1'b1)   // EXACTLY 8 bits but at receiver frequency
+                 begin   
+                    shift = 1'b0;
+                    next_state = PARITY;
+                 end
+            end
+
+            PARITY: begin
+                shift        = 1'b0; 
+                start        = 1'b0;
+                parity_load  = 1'b1; 
+                chk_stop     = 1'b0; 
+                if(parity_error == 1)
+                begin
+                    next_state   = IDLE;
+                end
+                else if (parity_error == 0)
+                begin
+                    next_state = STOP;
+                end
+            end
+
+            STOP: begin
+                shift      = 1'b0;
+                start      = 1'b0;
+                parity_load = 1'b0;
+                chk_stop   = 1'b1; 
+                if(stop_error == 1)
+                begin
+                    next_state   = IDLE;
+                end
+                else if (stop_error == 0)
+                begin
+                    $display("successful receiving");
+                    next_state   = IDLE;
+                end
+            end
+
+            default: 
+            begin
+                start        = 1'b0;
+                next_state   = IDLE;
+                state        = IDLE;
+                shift        = 1'b0;
+                parity_load = 1'b0;
+                chk_stop     = 1'b0;
+            end
+        endcase
     end
-    
-    always @(state)
-    begin 
-        case (state)
-            IDLE:begin
-                count_en=0;
-                run_shift=0;
-                parity_load=0;
-                chk_stop=0;
-            end
-            DATA:begin
-                count_en=1;
-                run_shift=1;
-                parity_load=0;
-                chk_stop=0;
-            end
-            PARITY:begin
-                count_en=0;
-                run_shift=0;
-                parity_load=1;
-                chk_stop=0;
-            end
-            STOP:begin
-                count_en=0;
-                run_shift=0;
-                parity_load=0;
-                chk_stop=1;
-            end
-       endcase
-       end
+
 endmodule
