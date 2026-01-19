@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -21,33 +21,44 @@
 
 
 module rx_sipo (
-    input clk,
-    input reset,
-    input rx_in,
-    input sample_done,
-    input shift,
-    output [9:0] data_out );
-
-    reg [9:0] temp;
-
-    assign data_out=temp;
+    input        rx_clk,
+    input        reset,
+    input        rx_in,
+    input        shift,          // asserted once per bit-time
+    output reg [7:0] data_out,
+    output reg       data_valid   // goes high after 8 bits
+);
     
-    always@(posedge clk, posedge reset)
-    begin
-        if(reset)
-            temp<=0;
-        else
+    reg [3:0] bit_cnt;
+    reg [3:0] counter;
+
+    always @( posedge rx_clk or posedge reset) begin
+        if (reset) begin
+            data_out   <= 8'b0;
+            data_valid <= 1'b0;
+            bit_cnt    <= 4'b0;
+            counter    <= 4'b0;
+        end 
+        else 
         begin
-            if(shift==1)
+            if (shift==1) 
             begin
-                if(sample_done)
-                    temp <= {rx_in, temp[9:1]};
-                else
-                    temp <= temp;
+                bit_cnt <= bit_cnt +1'b1;
+                // UART = LSB first
+                if (bit_cnt == 4'b1000)
+                begin
+                    data_out <= {rx_in, data_out[7:1]};
+                    counter  <= counter +1'b1;
+                end
+                if (counter == 4'b1001) 
+                begin
+                    data_valid <= 1'b1; // byte complete
+                    counter    <= 4'b0;
+                    bit_cnt    <= 4'b0;
+                end
             end
-            else
-                temp <= temp;
         end
     end
+       
 
 endmodule
