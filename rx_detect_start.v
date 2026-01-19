@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -20,11 +20,24 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module rx_detect_start(
-    input rx_in,
-    output strt_bit );
+module rx_start(
+    input  start,       // NEW: here start from fsm 
+    input  reset,
+    input  rx_in,
+    output reg strt_bit
+);
 
-    assign strt_bit= !(rx_in);
-    // if input is 0 then start
-    
+
+    always @( posedge reset or negedge rx_in) 
+    begin
+        if (reset) begin
+            strt_bit <= 1'b0;
+        end
+        else 
+        if((start==1)&&(rx_in==0))
+                strt_bit <= 1'b1;
+        else
+        strt_bit=0;
+    end
+
 endmodule
