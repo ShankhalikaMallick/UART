@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ps / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
 // Engineer: 
@@ -19,36 +19,32 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
- `include "rx_detect_start.v"
- `include "rx_parity_check.v"
+ `include "rx_start.v"
+ `include "rx_parity.v"
  `include "rx_sipo.v"
- `include "rx_stop_bit.v"
+ `include "rx_stop.v"
  `include "rx_fsm.v"
 
 module uart_rx(
     input clk,
     input reset,
     input rx_data_in,
-    output [7:0] rx_data_out,
-    output parity_error,
-    output stop_error,
-    output rx_done    );
+    output [7:0] sipo_out,
+    output parity_error,                 // shows if transmitter and receiver have same parity bit
+    output stop_error);
     
+    wire start;                           // checks for start
     wire strt_bit;
-    wire [9:0] sipo_out;
-    wire parity_load;
-    wire [7:0] parity_out;
-    wire sample_done;
-    wire run_shift;
+    wire shift;                          // start converting the serial packet to parallel
+    wire parity_load;                    // load the data for parity checking
     wire chk_stop;
+    wire data_valid;
     wire stop_bit_err;
-    
-    assign rx_done= chk_stop;       // output is checked at the end state
-    
-    rx_detect_start rx1(rx_data_in, strt_bit);
-    rx_sipo rx2(clk, reset, rx_data_in, sample_done, run_shift, sipo_out);
-    rx_parity_check rx3 (sipo_out[9], sipo_out[7:0], parity_load, parity_error, parity_out);
-    rx_stop_bit rx4 (sipo_out[9], parity_out, chk_stop, stop_error, rx_data_out);
-    rx_fsm rx5(clk, reset, strt_bit, run_shift, parity_load, parity_error, chk_stop, sample_done);
+        
+    rx_start rx1( start, reset, rx_data_in, strt_bit);
+    rx_sipo rx2( clk, reset, rx_data_in, shift, sipo_out[7:0], data_valid);
+    rx_parity rx3 (reset, rx_data_in, sipo_out[7:0], parity_load, parity_error);
+    rx_stop rx4 (reset, chk_stop, rx_data_in, stop_error);
+    rx_fsm rx5(clk, reset, strt_bit, data_valid, parity_error, stop_error, start, shift, parity_load, chk_stop);
     
 endmodule
